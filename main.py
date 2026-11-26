@@ -1,31 +1,41 @@
-#!/usr/bin/env python3
-"""World news of Thursday 26 November 2026, summed up in one image.
+"""Entry point for the world-news front-page image.
 
-The entry image is drawn in advance by draw.py and shipped in this
-repository as entry.png (a 1024x1024 newspaper front page). This program
-copies it to the grader's output path. Standard library only, no network,
-and the same bytes every run.
+Copies the bundled entry.png next to this script into /output/entry.png
+and checks the copy is byte-for-byte identical by comparing SHA-256
+hashes of the source and the output.
 """
+
+import hashlib
 import os
-import shutil
+import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-OUT_DIR = os.environ.get("MAKEFUN_OUTPUT_DIR", "/output")
+SOURCE = os.path.join(HERE, "entry.png")
+OUTPUT_DIR = "/output"
+OUTPUT = os.path.join(OUTPUT_DIR, "entry.png")
+
+
+def sha256(path):
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for chunk in iter(lambda: handle.read(65536), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def main():
-    src = os.path.join(HERE, "entry.png")
-    dst = os.path.join(OUT_DIR, "entry.png")
-    os.makedirs(OUT_DIR, exist_ok=True)
-    shutil.copyfile(src, dst)
-    # The two runs must write the same bytes: confirm the copy is exact.
-    with open(src, "rb") as f:
-        expected = f.read()
-    with open(dst, "rb") as f:
-        written = f.read()
-    if written != expected:
-        raise SystemExit("entry.png copy differs from the shipped image")
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    with open(SOURCE, "rb") as src:
+        data = src.read()
+    with open(OUTPUT, "wb") as dst:
+        dst.write(data)
+    if sha256(SOURCE) != sha256(OUTPUT):
+        print("error: output does not match source", file=sys.stderr)
+        return 1
+    print(f"wrote {OUTPUT} ({len(data)} bytes)")
+    print("success: output matches source byte-for-byte")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
